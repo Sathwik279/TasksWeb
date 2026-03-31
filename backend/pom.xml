@@ -47,9 +47,9 @@
 
 		<!-- Explicit MySQL driver – required for jdbc:mysql URLs -->
 		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
-			<scope>runtime</scope>          <!-- ← this is OK now -->
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
 		</dependency>
 
 		<!-- 🔑 JWT -->

@@ -10,6 +10,8 @@
 *.sln
 *.sw?
 .env
+.env.production
+backend/.env.production
 
 # ====================================================================
 # FRONTEND (React / Vite / Node)
