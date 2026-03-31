@@ -30,43 +30,7 @@ export function TodoProvider({ children }) {
     }
   }, [token]);
 
-  useEffect(() => {
-    if (!token) return;
-
-    const connectSSE = async () => {
-      try {
-        await fetchEventSource(`${baseURL}/crud/stream`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          onmessage(event) {
-            if (event.event === "AI_UPDATE") {
-              const data = JSON.parse(event.data);
-              console.log("AI Update Received via SSE:", data);
-
-              setTodos((prev) =>
-                prev.map((t) =>
-                  t.id === data.todoId
-                    ? { ...t, aiContent: data.aiContent }
-                    : t,
-                ),
-              );
-
-              showNotification("AI Summary Ready!", "success");
-            }
-          },
-          onerror(err) {
-            console.error("SSE Connection Error. Retrying...", err);
-          },
-        });
-      } catch (error) {
-        console.error("Failed to start SSE stream", error);
-      }
-    };
-
-    connectSSE();
-  }, [token]);
-
+ 
   const updateTodo = async (id, updatedData) => {
     const previousTodos = [...todos];
 
@@ -74,7 +38,10 @@ export function TodoProvider({ children }) {
       prev.map((t) => (t.id === id ? { ...t, ...updatedData } : t)),
     );
     try {
-      await updateTodoApi(token, id, updatedData);
+      const updatedTodoFromDB = await updateTodoApi(token, id, updatedData);
+      setTodos((prev) =>
+        prev.map((t) => (t.id === id ? updatedTodoFromDB : t)),
+      );
     } catch (error) {
       setTodos(previousTodos);
       showNotification("Sync failed reverted changes", "error");
