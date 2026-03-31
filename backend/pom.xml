@@ -45,7 +45,7 @@
 		</dependency>
 
 
-		<!-- Explicit MySQL driver – required for jdbc:mysql URLs -->
+		<!-- 🐘 PostgreSQL driver -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
