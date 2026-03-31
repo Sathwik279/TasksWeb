@@ -8,7 +8,10 @@ import com.sathwik.auth.auth_service.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -20,52 +23,46 @@ public class AuthController {
 
     private final JwtService jwtService;
     private final UserRepository userRepo;
+    private final AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(JwtService jwtService,UserRepository userRepo) {
+    public AuthController(JwtService jwtService, UserRepository userRepo, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder) {
         this.jwtService = jwtService;
         this.userRepo = userRepo;
+        this.authenticationManager = authenticationManager;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // POST maps..
     @PostMapping("/register")
-    public ResponseEntity<?> register(
-           @RequestBody RegisterRequest dto) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest dto) {
         try {
-            UserEntity savedUser =
-                    userRepo.save(new UserEntity(
-                            dto.getUserName(),
-                            dto.getEmail(),
-                            dto.getPassword()
-                    ));
+            UserEntity savedUser = userRepo.save(new UserEntity(
+                    dto.getUserName(),
+                    dto.getEmail(),
+                    passwordEncoder.encode(dto.getPassword())
+            ));
 
             String token = jwtService.generateToken(savedUser.getUserId());
-            return ResponseEntity.status(201).body(Map.of("token",token));
-        } catch (IllegalArgumentException e) {
-           return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error",e.getMessage()));
+            return ResponseEntity.status(201).body(Map.of("token", token));
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "An account with this email already exists!"));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error","Registration unsuccessful! "+e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Registration error: " + e.getMessage()));
         }
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest dto) {
         try {
-            // 1. Fetch user by email
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword()));
             UserEntity user = userRepo.findByEmail(dto.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("User not found after authentication"));
 
-            // 2. Check if the raw password matches the encoded password from DB
-            if(!dto.getPassword().equals(user.getPassword())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
-            }
-
-            // 3. If password matches, generate token
             String token = jwtService.generateToken(user.getUserId());
             return ResponseEntity.ok(Map.of("token", token));
-
         } catch (Exception e) {
-            // Return 401 for any failed authentication attempt
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid email or password"));
         }
     }
 

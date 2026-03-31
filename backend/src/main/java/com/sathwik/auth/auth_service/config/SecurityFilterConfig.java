@@ -8,6 +8,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import com.sathwik.auth.auth_service.filter.JwtAuthenticationFilter;
@@ -17,9 +21,20 @@ import com.sathwik.auth.auth_service.filter.JwtAuthenticationFilter;
 public class SecurityFilterConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final UserDetailsService userDetailsService;
+    private final PasswordEncoder passwordEncoder;
 
-    public SecurityFilterConfig(JwtAuthenticationFilter jwtFilter) {
+    public SecurityFilterConfig(JwtAuthenticationFilter jwtFilter, UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
         this.jwtFilter = jwtFilter;
+        this.userDetailsService = userDetailsService;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        AuthenticationManagerBuilder authManagerBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
+        authManagerBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
+        return authManagerBuilder.build();
     }
 
     @Bean
